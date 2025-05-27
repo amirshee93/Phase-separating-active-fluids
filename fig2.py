@@ -1,11 +1,11 @@
 
 ---
 
-### `plot_kymographs.py`
+### `fig2.py`
 ```python
 #!/usr/bin/env python3
 """
-plot_kymographs.py
+fig2.py
 
 Load a series of CSV files with columns [x, ψ, φ, v] and
 produce three stacked kymograph panels (ψ, φ, v) as fig2.png.
