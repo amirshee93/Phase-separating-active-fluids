@@ -32,21 +32,27 @@ This Python script numerically solves an advection–diffusion system for two sp
 This script generates a two‑panel figure showing the real and imaginary parts of the growth rate
 (λ) for an active–passive system as functions of wave number *q* and parameters *Pe* or *ωₒₙ*.
 
-# Heatmap of $q_{\max}$ over $\omega_{\mathrm{on}}$–Pe Plane: fig1c.py
+# Heatmap of $q_{\max}$ over $\omega_{\mathrm{on}}$–Pe Plane (fig1c.py)
 
 This script computes and plots the wavenumber $q$ that maximizes the growth rate
 $\lambda_{\mathrm{Re}}(q)$ as a function of on‐rate $\omega_{\rm on}$ and Peclet
 number Pe, producing panel (c) of Figure 1.
 
-# Kymograph of Concentrations & Velocity: fig2.py
+# Kymograph of Concentrations & Velocity (fig2.py)
 
 This script loads a time series of CSV files containing  
 `x, ψ(x,t), φ(x,t), v(x,t)` data and produces three stacked  
 kymograph panels (ψ, φ, and v) as `fig2.png`.
 
-# Four‑Panel Concentration & Velocity Profiles: fig3.py
+# Four‑Panel Concentration & Velocity Profiles (fig3.py)
 
 This script generates a 2×2 panel figure showing concentrations (ψ, φ) and velocity derivatives
 for two parameter sets (Pe=3.5, ωₒₙ=0.15 in panels a/c; Pe=3.0, ωₒₙ=0.5 in panels b/d).  
 The output is saved as `fig3.png`.
+
+# Phase Diagram & Stability Map (fig4.py)
+
+This script computes and visualizes the real‐part zero contour, oscillatory regime,  
+and phase‐diagram points on the (ωₒₙ, Pe) plane, saving  
+the result as `fig4.png`
 
