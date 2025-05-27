@@ -28,12 +28,12 @@ This Python script numerically solves an advection–diffusion system for two sp
 - Matplotlib
 
 
-# Stability Maps: Fig1ab.py
+# Stability Maps: fig1ab.py
 
 This script generates a two‑panel figure showing the real and imaginary parts of the growth rate
 (λ) for an active–passive system as functions of wave number *q* and parameters *Pe* or *ωₒₙ*.
 
-# Heatmap of $q_{\max}$ over $\omega_{\mathrm{on}}$–Pe Plane
+# Heatmap of $q_{\max}$ over $\omega_{\mathrm{on}}$–Pe Plane: fig1c.py
 
 This script computes and plots the wavenumber $q$ that maximizes the growth rate
 $\lambda_{\mathrm{Re}}(q)$ as a function of on‐rate $\omega_{\rm on}$ and Peclet
