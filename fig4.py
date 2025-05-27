@@ -1,240 +1,158 @@
+
+---
+
+### `fig4.py`
+```python
+#!/usr/bin/env python3
+"""
+fig4.py
+
+Generate Fig. 4: the (ω_on, Pe) stability map showing:
+  - λ_real = 0 contour (black solid)
+  - oscillatory λ_im > 0 region (red dashed contour & shading)
+  - analytic Pe_c(ω_on) line (magenta dashed)
+  - phase‐diagram points from CSVs
+Saves as `fig4.png` (600 dpi).
+"""
+
 import os
-import matplotlib.pyplot as plt
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Publication‐style fonts
 plt.rcParams['text.usetex'] = True
 plt.rcParams['font.family'] = 'Helvetica'
-ngrid = 500
-fontsize = 26
-markersize = 9
-cmap = plt.cm.RdBu
 
-fig = plt.figure(figsize=(8, 6))
-ax1 = plt.subplot2grid((1, 1), (0, 0))
-ax1.tick_params(labelsize=22)
+# Plot settings
+FIG_NAME   = 'fig4.png'
+FONTSIZE   = 26
+MARKERSIZE = 9
+CMAP       = plt.cm.RdBu
+NGRID      = 500
 
-# Set y-axis ticks 
-tick_positions = [2, 2.5, 3, 3.5]
-tick_labels = [r'$2.0$', r'$2.5$', r'$3.0$', r'$3.5$']
-ax1.set_yticks(tick_positions)
-ax1.set_yticklabels(tick_labels)
-minor_locator = ticker.AutoMinorLocator(5)
-ax1.yaxis.set_minor_locator(minor_locator)
+# Physical constants
+L      = 2 * np.pi
+A      = 0.2
+Q_CONST= 1.0           # fixed q for stability eval
+D      = 0.1
+RHO0   = 1.0
+WO     = 1.0           # off‐rate
+ALPHA  = 10.0
 
-# Set x-axis ticks 
-tick_positions = [0, 0.5, 1]
-tick_labels = [r'$0$', r'$0.5$', r'$1$']
-ax1.set_xticks(tick_positions)
-ax1.set_xticklabels(tick_labels)
-minor_locator = ticker.AutoMinorLocator(5)
-ax1.xaxis.set_minor_locator(minor_locator)
+# Phase‐diagram data directory (adjust to your folder)
+DATA_DIR_PHASE = Path.home() / 'my_work/active_fluids/numerics/one_dimension/phase_diagram'
 
-# Adjust margins
-left_margin = 0.1   
-right_margin = 0.97  
-bottom_margin = 0.125 
-top_margin = 0.96    
-wspace = 0.25
-hspace = 0.25
-plt.subplots_adjust(left=left_margin, right=right_margin, bottom=bottom_margin, top=top_margin, wspace=wspace, hspace=hspace)
+# CSV files & marker styles
+PHASE_FILES = {
+    'Homogeneous':            ('phase_data_homogeneous.csv',          'o', 'k'),
+    'Stationary In‑Phase':    ('phase_data_stationary_in_phase.csv',  's', 'darkblue'),
+    'Stationary Out‑Phase':   ('phase_data_stationary_out_of_phase.csv','^','darkgreen'),
+    'Moving':                 ('phase_data_moving.csv',               'o', 'darkred'),
+}
+# ──────────────────────────────────────────────────────────────────────────────
 
-def read_two_column_file(file_name):
-    with open(file_name, 'r') as data:
-        x1, x2 = [], []
-        for line in data:
-            p = line.split()
-            x1.append(float(p[0]))
-            x2.append(float(p[1]))
-    return x1, x2
 
-# Model parameters
-D = 0.1
-rho0 = 1.0
-wo = 1.0
-alpha = 10.0
-q = 1.0  # This q is used in the stability functions below
-
-# Define analytic critical Pe function.
-def critical_Pe(won):
+def critical_Pe(won: float) -> float:
     """
-    Compute the critical Péclet number:
-      Pe_c = ((1+q_c^2)/((1+alpha*wo)*psi0*fpsi))*(1+D + (wo+won)/q_c^2)
-    where:
-      q_c = ((wo+won)/(1+D))^(1/4),
-      psi0 = (won/(wo+won))*rho0, and fpsi = 1/(1+psi0)^2.
-    For won very close to zero, returns np.nan.
+    Analytic critical Pe from Eq. (10):
+      Pe_c = ((1+q_c^2)/((1+αωₒff)ψ₀ fψ))*(1 + D + (ωₒff+ωₒn)/q_c^2)
     """
     if won < 1e-6:
         return np.nan
-    psi0 = (won/(wo+won))*rho0
-    fpsi = 1/(1+psi0)**2
-    q_c = ((wo+won)/(1+D))**(1/4)
-    return (1+q_c**2)/((1+alpha*wo)*psi0*fpsi) * (1+D + (wo+won)/(q_c**2))
+    psi0 = (won / (WO + won)) * RHO0
+    fpsi = 1 / (1 + psi0)**2
+    q_c  = ((WO + won) / (1 + D))**0.25
+    return ((1 + q_c**2) / ((1 + ALPHA * WO) * psi0 * fpsi)
+            * (1 + D + (WO + won) / q_c**2))
 
-def function_lambda_real(won, Pe):
-    psi0 = (won/(wo+won))*rho0
-    phi0 = (wo/(wo+won))*rho0
-    A = 1 + D
-    B = Pe*(1+alpha*wo)*(psi0/(1+psi0)**2)
-    m11 = -(q**2)*(1.0 - (B/(1+q**2))) - wo
-    m22 = -(q**2)*D - won
+
+def stability_eigen(won: float, pe: float):
+    """
+    Returns (λ_re, λ_im) for fixed q=Q_CONST, ω_on=won, Pe=pe.
+    """
+    psi0 = (won / (WO + won)) * RHO0
+    phi0 = (WO  / (WO + won)) * RHO0
+    B    = pe * (1 + ALPHA * WO) * (psi0 / (1 + psi0)**2)
+
+    m11 = -Q_CONST**2 * (1 - B/(1 + Q_CONST**2)) - WO
+    m22 = -Q_CONST**2 * D        - won
     m12 = won
-    m21 = -(q**2)*(-((Pe*(phi0-alpha*wo*psi0)*(1/(1+psi0)**2))/(1+q**2))) + wo
-    trace = m11 + m22
-    det = m11*m22 - m12*m21
-    delta = trace**2 - 4.0 * det
-    if delta < 0:
-        lambda_real_values = trace/2.0
-    else:
-        lambda_real_values = np.real((trace + np.sqrt(delta))/2.0)
-    return lambda_real_values
+    m21 = (-Q_CONST**2 * (-(pe * (phi0 - ALPHA*WO*psi0)
+              / (1 + psi0)**2)) / (1 + Q_CONST**2)) + WO
 
-def function_lambda_im(won, Pe):
-    psi0 = (won/(wo+won))*rho0
-    phi0 = (wo/(wo+won))*rho0
-    A = 1 + D
-    B = Pe*(1+alpha*wo)*(psi0/(1+psi0)**2)
-    m11 = -(q**2)*(1.0 - (B/(1+q**2))) - wo
-    m22 = -(q**2)*D - won
-    m12 = won
-    m21 = -(q**2)*(-((Pe*(phi0-alpha*wo*psi0)*(1/(1+psi0)**2))/(1+q**2))) + wo
-    trace = m11 + m22
-    det = m11*m22 - m12*m21
-    delta = trace**2 - 4.0 * det
-    if delta < 0:
-        lambda_im_values = np.sqrt(-delta)/2.0
-    else:
-        lambda_im_values = 0
-    return lambda_im_values
+    tr    = m11 + m22
+    det   = m11*m22 - m12*m21
+    Δ     = tr**2 - 4 * det
 
-def function_lambdap_real(won, Pe):
-    psi0 = (won/(wo+won))*rho0
-    phi0 = (wo/(wo+won))*rho0
-    A = 1 + D
-    B = Pe*(1+alpha*wo)*(psi0/(1+psi0)**2)
-    m11 = -(q**2)*(1.0 - (B/(1+q**2))) - wo
-    m22 = -(q**2)*D - won
-    m12 = won
-    m21 = -(q**2)*(-((Pe*(phi0-alpha*wo*psi0)*(1/(1+psi0)**2))/(1+q**2))) + wo
-    p11 = (m11 + m21 + m12 + m22) / 2.0
-    p12 = (m11 + m21 - m12 - m22) / 2.0
-    p21 = (m11 - m21 + m12 - m22) / 2.0
-    p22 = (m11 - m21 - m12 + m22) / 2.0
-    tracep = p11 + p22
-    detp = p11*p22 - p12*p21
-    deltap = tracep**2 - 4.0 * detp
-    if deltap < 0:
-        lambdap_real_values = tracep/2.0
-    else:
-        lambdap_real_values = np.real((tracep + np.sqrt(deltap))/2.0)
-    return lambdap_real_values
-
-def function_lambdap_im(won, Pe):
-    psi0 = (won/(wo+won))*rho0
-    phi0 = (wo/(wo+won))*rho0
-    A = 1 + D
-    B = Pe*(1+alpha*wo)*(psi0/(1+psi0)**2)
-    m11 = -(q**2)*(1.0 - (B/(1+q**2))) - wo
-    m22 = -(q**2)*D - won
-    m12 = won
-    m21 = -(q**2)*(-((Pe*(phi0-alpha*wo*psi0)*(1/(1+psi0)**2))/(1+q**2))) + wo
-    p11 = (m11 + m21 + m12 + m22) / 2.0
-    p12 = (m11 + m21 - m12 - m22) / 2.0
-    p21 = (m11 - m21 + m12 - m22) / 2.0
-    p22 = (m11 - m21 - m12 + m22) / 2.0
-    tracep = p11 + p22
-    detp = p11*p22 - p12*p21
-    deltap = tracep**2 - 4.0 * detp
-    if detp < 0:
-        lambdap_im_values = p11
-    else:
-        lambdap_im_values = 0
-    return lambdap_im_values
-
-# Use a won range that avoids zero (start at a small positive value)
-won_values = np.linspace(1e-6, 1.1, ngrid)
-Pe_values = np.linspace(2, 3.75, ngrid)
-
-lambda_real = np.zeros((len(won_values), len(Pe_values)))
-lambda_im = np.zeros((len(won_values), len(Pe_values)))
-lambdap_real = np.zeros((len(won_values), len(Pe_values)))
-lambdap_im = np.zeros((len(won_values), len(Pe_values)))
-for j, won in enumerate(won_values):
-    for i, Pe in enumerate(Pe_values):
-        lambda_real[i, j] = function_lambda_real(won,Pe)
-        lambda_im[i, j] = function_lambda_im(won,Pe)
-        lambdap_real[i, j] = function_lambdap_real(won,Pe)
-        lambdap_im[i, j] = function_lambdap_im(won,Pe)
-
-ax1.contour(won_values, Pe_values, lambda_real, levels=[0], colors='k', linewidths=3.0)
-masked_lambda_im = np.ma.masked_where(lambda_real <= 0, lambda_im)
-ax1.contour(won_values, Pe_values, masked_lambda_im, levels=[0], colors='darkred', linewidths=3.0, linestyles='dashed')
-
-ax1.contourf(won_values, Pe_values, lambda_real, levels=[min(lambda_real.flatten()), 0], colors='k', alpha = 0.1, extend='min')
-
-mask = (lambda_real > 0) & (lambda_im > 0)
-ax1.contourf(won_values, Pe_values, mask, levels=[0.5, 1], colors='darkred', alpha=0.1)
-
-mask = (lambda_real > 0)
-ax1.contourf(won_values, Pe_values, mask, levels=[0.5, 1], colors='darkblue', alpha=0.1)
+    λ_re = np.where(Δ < 0, tr/2, (tr + np.sqrt(Δ)) / 2)
+    λ_im = np.where(Δ < 0, np.sqrt(-Δ)/2, 0.0)
+    return λ_re, λ_im
 
 
+def load_phase_data(filename: str):
+    """Load (won, Pe) from a phase‐diagram CSV."""
+    df = pd.read_csv(DATA_DIR_PHASE / filename)
+    return df['won'].values, df['Pe'].values
 
 
-# --- NEW: Add analytic critical Pe line in the oscillatory regime ---
-won_line = []
-Pe_crit_line = []
-for w in won_values:
-    Pe_c = critical_Pe(w)
-    # Only include points in the oscillatory regime where the imaginary part is positive.
-    if not np.isnan(Pe_c) and function_lambda_im(w, Pe_c) > 0:
-        won_line.append(w)
-        Pe_crit_line.append(Pe_c)
+def main():
+    # Prepare grid
+    won_vals = np.linspace(0, 1.1, NGRID)
+    pe_vals  = np.linspace(2.0, 3.75, NGRID)
+    W, P     = np.meshgrid(won_vals, pe_vals, indexing='xy')
 
-if won_line:
-    ax1.plot(won_line, Pe_crit_line, '--', color='m', linewidth=3) #, label=r'$\mathbf{Pe_c~(Eq.~(10))}$')
-# -------------------------------------------------------------------------
+    # Compute λ_re, λ_im on grid
+    λ_re, λ_im = stability_eigen(W, P)
+
+    # Setup figure
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.tick_params(labelsize=FONTSIZE)
+    ax.xaxis.set_minor_locator(ticker.AutoMinorLocator(5))
+    ax.yaxis.set_minor_locator(ticker.AutoMinorLocator(5))
+    ax.set_xlim(0, 1.02)
+    ax.set_ylim(2.25, 3.55)
+
+    # Contours and shading
+    ax.contour( W, P, λ_re, levels=[0], colors='k', linewidths=3 )
+    ax.contour( W, P, np.ma.masked_where(λ_re <= 0, λ_im),
+                levels=[0], colors='darkred', linewidths=3, linestyles='dashed' )
+
+    ax.contourf(W, P, λ_re <= 0,  levels=[0.5,1], colors=['k'],    alpha=0.1 )
+    ax.contourf(W, P, (λ_re > 0) & (λ_im > 0), levels=[0.5,1],
+                colors=['darkred'], alpha=0.1 )
+    ax.contourf(W, P, λ_re > 0,   levels=[0.5,1], colors=['darkblue'], alpha=0.1 )
+
+    # Analytic critical Pe
+    won_line, pe_line = [], []
+    for w in won_vals:
+        pc = critical_Pe(w)
+        if not np.isnan(pc) and np.interp(w, W.flatten(), λ_im.flatten())>0:
+            won_line.append(w)
+            pe_line.append(pc)
+    ax.plot(won_line, pe_line, '--', color='magenta', linewidth=3,
+            label=r'$Pe_c$ (Eq.~10)')
+
+    # Overlay phase points
+    for label, (fname, marker, col) in PHASE_FILES.items():
+        won_d, pe_d = load_phase_data(fname)
+        ax.plot(won_d, pe_d, marker=marker, color=col,
+                markerfacecolor='none', ms=MARKERSIZE,
+                label=label)
+
+    # Labels
+    ax.set_xlabel(r'$\omega_{\mathrm{on}}$', fontsize=FONTSIZE, labelpad=-5)
+    ax.set_ylabel(r'$Pe$',                 fontsize=FONTSIZE, labelpad=-5)
+    ax.legend(loc='upper right', fontsize=FONTSIZE-5)
+
+    plt.tight_layout()
+    fig.savefig(FIG_NAME, dpi=600)
+    plt.show()
 
 
-ax1.tick_params(which='major', direction='in', bottom=True, top=True, left=True, right=True)
-ax1.tick_params(which='minor', direction='in', bottom=True, top=True, left=True, right=True)
-ax1.set_xlim([0, 1.02])
-ax1.set_ylim([2.25, 3.55])
-ax1.set_xlabel(r'$\omega_{\mathrm{on}}$', fontsize=fontsize, labelpad=-5)
-ax1.set_ylabel('$Pe$', fontsize=fontsize, labelpad=-5)
-
-# Plot phase data from external CSV files
-subdir = f'/Users/amirshee/my_work/active_fluids/numerics/one_dimension/phase_diagram/phase_data_homogeneous.csv'
-df = pd.read_csv(subdir)
-won_data = df['won'].values
-Pe_data = df['Pe'].values
-ax1.plot(won_data, Pe_data, 'o', color='k', markerfacecolor='none', markersize=markersize, label='Homogeneous')
-
-subdir = f'/Users/amirshee/my_work/active_fluids/numerics/one_dimension/phase_diagram/phase_data_stationary_in_phase.csv'
-df = pd.read_csv(subdir)
-won_data = df['won'].values
-Pe_data = df['Pe'].values
-ax1.plot(won_data, Pe_data, 's', color='darkblue', markersize=markersize, label='Stationary 1')
-
-subdir = f'/Users/amirshee/my_work/active_fluids/numerics/one_dimension/phase_diagram/phase_data_stationary_out_of_phase.csv'
-df = pd.read_csv(subdir)
-won_data = df['won'].values
-Pe_data = df['Pe'].values
-ax1.plot(won_data, Pe_data, '^', color='darkgreen', markersize=markersize, label='Stationary 2')
-
-subdir = f'/Users/amirshee/my_work/active_fluids/numerics/one_dimension/phase_diagram/phase_data_moving.csv'
-df = pd.read_csv(subdir)
-won_data = df['won'].values
-Pe_data = df['Pe'].values
-ax1.plot(won_data, Pe_data, 'o', color='darkred', markersize=markersize, label='Moving')
-
-ax1.legend(loc='upper right', fontsize=fontsize-5, markerfirst=True, labelspacing=0.02)
-
-masked_lambdap_im = np.ma.masked_where(lambdap_real <= 0, lambdap_im)
-ax1.contour(won_values, Pe_values, masked_lambdap_im, levels=[0], colors='k', linewidths=2.0, linestyles='dashed')
-
-plt.show()
-file_base_name = "fig4"  # change to your desired filename without extension
-fig.savefig(f"{file_base_name}.png", dpi=600)   # PNG format
+if __name__ == '__main__':
+    main()
