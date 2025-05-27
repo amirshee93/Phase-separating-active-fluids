@@ -27,7 +27,6 @@ This Python script numerically solves an advection–diffusion system for two sp
 - NumPy
 - Matplotlib
 
-
 # Stability Maps: fig1ab.py
 
 This script generates a two‑panel figure showing the real and imaginary parts of the growth rate
@@ -38,3 +37,9 @@ This script generates a two‑panel figure showing the real and imaginary parts 
 This script computes and plots the wavenumber $q$ that maximizes the growth rate
 $\lambda_{\mathrm{Re}}(q)$ as a function of on‐rate $\omega_{\rm on}$ and Peclet
 number Pe, producing panel (c) of Figure 1.
+
+# Kymograph of Concentrations & Velocity: fig2.py
+
+This script loads a time series of CSV files containing  
+`x, ψ(x,t), φ(x,t), v(x,t)` data and produces three stacked  
+kymograph panels (ψ, φ, and v) as `fig2.png`.
