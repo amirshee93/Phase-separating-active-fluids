@@ -38,13 +38,13 @@ This script computes and plots the wavenumber $q$ that maximizes the growth rate
 $\lambda_{\mathrm{Re}}(q)$ as a function of on‐rate $\omega_{\rm on}$ and Peclet
 number Pe, producing panel (c) of Figure 1.
 
-# Kymograph of Concentrations & Velocity (fig2.py)
+# Out-of-phase oscillatory-moving concentrations & velocity (fig2.py)
 
 This script loads a time series of CSV files containing  
 `x, ψ(x,t), φ(x,t), v(x,t)` data and produces three stacked  
 kymograph panels (ψ, φ, and v) as `fig2.png`.
 
-# Four‑Panel Concentration & Velocity Profiles (fig3.py)
+# Stationary in-phase and out-of-phase concentration & velocity profiles (fig3.py)
 
 This script generates a 2×2 panel figure showing concentrations (ψ, φ) and velocity derivatives
 for two parameter sets (Pe=3.5, ωₒₙ=0.15 in panels a/c; Pe=3.0, ωₒₙ=0.5 in panels b/d).  
