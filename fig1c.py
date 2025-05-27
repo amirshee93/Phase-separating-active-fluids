@@ -1,11 +1,11 @@
 
 ---
 
-### `Fig1c.py`
+### `fig1c.py`
 ```python
 #!/usr/bin/env python3
 """
-Fig1c.py
+fig1c.py
 
 Compute the wavenumber q that maximizes the real part of the growth rate
 λ(q) over a grid of ω_on and Pe, then plot the resulting heatmap as panel (c).
