@@ -8,7 +8,7 @@
 
 ---
 
-# Advection–Diffusion Simulation with CSV Output
+# Advection–Diffusion Simulation
 
 This Python script numerically solves an advection–diffusion system for two species (ψ, φ) with a dynamically updating velocity field **v(x,t)**, writes time‐step snapshots to CSV, and visualizes the last step.
 
