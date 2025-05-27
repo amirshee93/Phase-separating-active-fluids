@@ -28,7 +28,7 @@ This Python script numerically solves an advection–diffusion system for two sp
 - Matplotlib
 
 
-# Lambda Stability Maps: Fig1ab.py
+# Stability Maps: Fig1ab.py
 
 This script generates a two‑panel figure showing the real and imaginary parts of the growth rate
 (λ) for an active–passive system as functions of wave number *q* and parameters *Pe* or *ωₒₙ*.
